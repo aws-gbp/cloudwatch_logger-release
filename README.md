@@ -23,8 +23,14 @@ The source code is released under an [Apache 2.0].
 
 ### Supported ROS Distributions
 - Kinetic
-- Lunar
 - Melodic
+
+### Build status
+
+* Travis CI: [![Build Status](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros1.svg?branch=master)](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros1)
+ * ROS build farm:
+   * v1.0.0:
+     * ROS Kinetic @ u16.04 Xenial [![Build Status](http://build.ros.org/job/Kbin_uX64__cloudwatch_logger__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__cloudwatch_logger__ubuntu_xenial_amd64__binary)
 
 ## Installation
 
@@ -37,26 +43,34 @@ This node will require the following AWS account IAM role permissions:
 - `logs:CreateLogStream`
 - `logs:CreateLogGroup`
 
+### Binaries
+On Ubuntu you can install the latest version of this package using the following command
+
+        sudo apt-get update
+        sudo apt-get install -y ros-kinetic-cloudwatch-logger
+
 ### Building from Source
-Create a ROS workspace and a source directory
+
+To build from source you'll need to create a new workspace, clone and checkout the latest release branch of this repository, install all the dependencies, and compile. If you need the latest development features you can clone from the `master` branch instead of the latest release branch. While we guarantee the release branches are stable, __the `master` should be considered to have an unstable build__ due to ongoing development. 
+
+- Create a ROS workspace and a source directory
 
     mkdir -p ~/ros-workspace/src
 
-To build from source, clone the latest version from master branch and compile the package.
+- Clone the package into the source directory . 
 
-- Clone the package into the source directory
+_Note: Replace __`{MAJOR.VERSION}`__ below with the latest major version number to get the latest release branch._
 
         cd ~/ros-workspace/src
-        git clone https://github.com/aws-robotics/utils-common.git
-        git clone https://github.com/aws-robotics/utils-ros1.git
-        git clone https://github.com/aws-robotics/monitoringmessages-ros1.git
-        git clone https://github.com/aws-robotics/cloudwatch-common.git
-        git clone https://github.com/aws-robotics/cloudwatchlogs-ros1.git
+        git clone https://github.com/aws-robotics/cloudwatchlogs-ros1.git -b release-v{MAJOR.VERSION}
 
 - Install dependencies
 
-        cd ~/ros-workspace && sudo apt-get update
+        cd ~/ros-workspace 
+        sudo apt-get update && rosdep update
         rosdep install --from-paths src --ignore-src -r -y
+        
+_Note: If building the master branch instead of a release branch you may need to also checkout and build the master branches of the packages this package depends on._
 
 - Build the packages
 
@@ -106,21 +120,21 @@ An example configuration file called `sample_configuration.yaml` is provided. Wh
 | log_group_name | AWS CloudWatch log group name | *std::string* | 'string'<br/>*note*: Log group names must be unique within a region foran AWS account |
 | log_stream_name | AWS CloudWatch log stream name | *std::string* | 'string'<br/>*note*: The : (colon) and * (asterisk) characters are not allowed |
 | topics | A list of topics to get logs from (excluding `rosout_agg`) | *std::vector<std::string>* | ['string', 'string', 'string'] |
-| min_log_severity| The minimum log severity for sending logs selectively to AWS CloudWatch Logs | *std::string* | DEBUG/INFO/WARN/ERROR/FATAL |
+| min_log_verbosity| The minimum log severity for sending logs selectively to AWS CloudWatch Logs, log messages with a severity lower than `min_log_verbosity` will be ignored | *std::string* | DEBUG/INFO/WARN/ERROR/FATAL |
 | aws_client_configuration | AWS region configuration | *std::string* | *region*: "us-west-2"/"us-east-1"/"us-east-2"/etc. |
 
 
 ## Performance and Benchmark Results
 We evaluated the performance of this node by runnning the followning scenario on a Raspberry Pi 3 Model B:
-- Launch a baseline graph containing the talker and listener nodes from the [roscpp_tutorials package](https://wiki.ros.org/roscpp_tutorials), plus two additional nodes that collect CPU and memory usage statistics. Allow the nodes to run for 60 seconds. 
-- Launch the Amazon CloudWatch Logs node using the launch file `example.launch` as described above. Allow the nodes to run for 180 seconds. 
-- Terminate the Amazon CloudWatch Logs node, and allow the remaining nodes to run for 60 seconds. 
+- Launch a baseline graph containing the talker and listener nodes from the [roscpp_tutorials package](https://wiki.ros.org/roscpp_tutorials), plus two additional nodes that collect CPU and memory usage statistics. Allow the nodes to run for 60 seconds.
+- Launch the Amazon CloudWatch Logs node using the launch file `example.launch` as described above. Allow the nodes to run for 180 seconds.
+- Terminate the Amazon CloudWatch Logs node, and allow the remaining nodes to run for 60 seconds.
 
-The following graph shows the CPU usage during that scenario. The 1 minute average CPU usage starts at 9.25% during the launch of the baseline graph, and stabilizes at 4.5%. When we launch the `cloudwatch_logger` node around second 60 the 1 minute average CPU increases up to a peak of 9.5%. After that initial peak, the CPU lowers to around 5% while the `cloudwatch_logger` node keeps sending the messages sent by the talker node to the AWS CloudWatch Logs service. 
+The following graph shows the CPU usage during that scenario. The 1 minute average CPU usage starts at 9.25% during the launch of the baseline graph, and stabilizes at 4.5%. When we launch the `cloudwatch_logger` node around second 60 the 1 minute average CPU increases up to a peak of 9.5%. After that initial peak, the CPU lowers to around 5% while the `cloudwatch_logger` node keeps sending the messages sent by the talker node to the AWS CloudWatch Logs service.
 
 ![cpu](wiki/images/cpu.svg)
 
-The following graph shows the memory usage during that scenario. We start with a memory usage of 368 MB that increases to a peak of 412 MB (+11.96%) when the `cloudwatch_logger` node starts running, and stabilizes to 394 (+7%) while the node keeps running. The memory usage goes back to 368 MB after stopping the node. 
+The following graph shows the memory usage during that scenario. We start with a memory usage of 368 MB that increases to a peak of 412 MB (+11.96%) when the `cloudwatch_logger` node starts running, and stabilizes to 394 (+7%) while the node keeps running. The memory usage goes back to 368 MB after stopping the node.
 
 ![memory](wiki/images/memory.svg)
 
