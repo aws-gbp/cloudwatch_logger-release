@@ -1,1 +1,1 @@
-{"trimbase": "", "trim": "", "parent": "release/kinetic/cloudwatch_logger", "base": "b0c10f5", "previous": "74bc5a3"}
+{"parent": "release/kinetic/cloudwatch_logger", "trim": "", "trimbase": "", "previous": "e98a1db", "base": "829ed4d"}
