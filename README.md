@@ -1,3 +1,26 @@
+## cloudwatch_logger (kinetic) - 2.1.0-2
+
+The packages in the `cloudwatch_logger` repository were released into the `kinetic` distro by running `/usr/local/bin/bloom-release cloudwatch_logger --track kinetic --rosdistro kinetic -e` on `Fri, 21 Jun 2019 21:27:16 -0000`
+
+The `cloudwatch_logger` package was released.
+
+Version of package(s) in repository `cloudwatch_logger`:
+
+- upstream repository: https://github.com/aws-robotics/cloudwatchlogs-ros1.git
+- release repository: https://github.com/aws-gbp/cloudwatch_logger-release.git
+- rosdistro version: `2.0.0-1`
+- old version: `2.1.0-1`
+- new version: `2.1.0-2`
+
+Versions of tools used:
+
+- bloom version: `0.8.0`
+- catkin_pkg version: `0.4.9`
+- rosdep version: `0.15.1`
+- rosdistro version: `0.7.2`
+- vcstools version: `0.1.40`
+
+
 ## cloudwatch_logger (kinetic) - 2.1.0-1
 
 The packages in the `cloudwatch_logger` repository were released into the `kinetic` distro by running `/usr/local/bin/bloom-release cloudwatch_logger --track kinetic --rosdistro kinetic -e` on `Fri, 21 Jun 2019 21:21:37 -0000`
