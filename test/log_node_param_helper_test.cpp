@@ -34,7 +34,7 @@ using Aws::AwsError;
 class ParameterReaderMock : public ParameterReaderInterface 
 {
 public:
- MOCK_CONST_METHOD2(ReadParam, Aws::AwsError(const ParameterPath &, std::vector<std::string> &));
+  MOCK_CONST_METHOD2(ReadParam, Aws::AwsError(const ParameterPath &, std::vector<std::string> &));
   MOCK_CONST_METHOD2(ReadParam, Aws::AwsError(const ParameterPath &, double &));
   MOCK_CONST_METHOD2(ReadParam, Aws::AwsError(const ParameterPath &, int &));
   MOCK_CONST_METHOD2(ReadParam, Aws::AwsError(const ParameterPath &, bool &));
@@ -254,6 +254,7 @@ TEST_F(LogNodeParamHelperFixture, TestReadReadMinLogVerbosity)
 
 AwsError MockReadParamAddStringToList(const ParameterPath & param_path, std::vector<std::string> & out)
 {
+  (void)param_path;
   out.emplace_back("String1");
   return AwsError::AWS_ERR_OK;
 }
