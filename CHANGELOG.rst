@@ -2,8 +2,19 @@
 Changelog for package cloudwatch_logger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.2.0 (2019-07-24)
+2.2.1 (2019-07-26)
 ------------------
+* Increment version (`#48 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/48>`_)
+  * increment version for binary packaging fix
+  Signed-off-by: Miaofei <miaofei@amazon.com>
+  * cleanup README
+  Signed-off-by: Miaofei <miaofei@amazon.com>
+* Merge pull request `#49 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/49>`_ from aws-robotics/remove-debug-flag
+  Minor updates for offline feature release
+* - remove debug flag (run with level info)
+  - minor README changes
+* install missing library (`#47 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/47>`_)
+  Signed-off-by: Miaofei <miaofei@amazon.com>
 * increment version for offline logs feature (`#46 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/46>`_)
   Signed-off-by: Miaofei <miaofei@amazon.com>
 * Fixing std_msgs, std_srvs dependency resolution (`#44 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/44>`_)
