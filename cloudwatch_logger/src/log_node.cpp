@@ -16,22 +16,19 @@
 #include <aws/core/utils/logging/AWSLogging.h>
 #include <aws/core/utils/logging/LogMacros.h>
 #include <aws_common/sdk_utils/client_configuration_provider.h>
-#include <aws_ros1_common/sdk_utils/logging/aws_ros_logger.h>
-#include <aws_ros1_common/sdk_utils/ros1_node_parameter_reader.h>
+#include <aws_ros2_common/sdk_utils/logging/aws_ros_logger.h>
+#include <aws_ros2_common/sdk_utils/ros2_node_parameter_reader.h>
 #include <cloudwatch_logger/log_node.h>
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_service_factory.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/log_service.h>
-#include <ros/ros.h>
-#include <rosgraph_msgs/Log.h>
-#include <std_srvs/Trigger.h>
-#include <std_srvs/Empty.h>
+#include <rclcpp/rclcpp.hpp>
 
 using namespace Aws::CloudWatchLogs::Utils;
 
-LogNode::LogNode(int8_t min_log_severity, std::unordered_set<std::string> ignore_nodes) 
-    : ignore_nodes_(std::move(ignore_nodes))
+LogNode::LogNode(int8_t min_log_severity, std::unordered_set<std::string> ignore_nodes)
+  : ignore_nodes_(std::move(ignore_nodes))
 {
   this->log_service_ = nullptr;
   this->min_log_severity_ = min_log_severity;
@@ -47,9 +44,9 @@ void LogNode::Initialize(const std::string & log_group, const std::string & log_
   this->log_service_ = factory->CreateLogService(log_group, log_stream, config, sdk_options, cloudwatch_options);
 }
 
-bool LogNode::checkIfOnline(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response) {
-
-  AWS_LOGSTREAM_DEBUG(__func__, "received request " << request);
+bool LogNode::checkIfOnline(std_srvs::srv::Trigger::Request & /*request*/, std_srvs::srv::Trigger::Response & response)
+{
+  // AWS_LOGSTREAM_DEBUG(__func__, "received request " << request);
 
   if (!this->log_service_) {
     response.success = false;
@@ -63,7 +60,8 @@ bool LogNode::checkIfOnline(std_srvs::Trigger::Request& request, std_srvs::Trigg
   return true;
 }
 
-bool LogNode::start() {
+bool LogNode::start()
+{
   bool is_started = true;
   if (this->log_service_) {
     is_started &= this->log_service_->start();
@@ -72,7 +70,8 @@ bool LogNode::start() {
   return is_started;
 }
 
-bool LogNode::shutdown() {
+bool LogNode::shutdown()
+{
   bool is_shutdown = Service::shutdown();
   if (this->log_service_) {
     is_shutdown &= this->log_service_->shutdown();
@@ -80,12 +79,12 @@ bool LogNode::shutdown() {
   return is_shutdown;
 }
 
-void LogNode::RecordLogs(const rosgraph_msgs::Log::ConstPtr & log_msg)
+void LogNode::RecordLogs(const rcl_interfaces::msg::Log::SharedPtr log_msg)
 {
   if (0 == this->ignore_nodes_.count(log_msg->name)) {
     if (nullptr == this->log_service_) {
-      AWS_LOG_ERROR(__func__,
-                    "Cannot publish CloudWatch logs with NULL CloudWatch LogManager instance.");
+      AWS_LOG_ERROR(__func__, "Cannot publish CloudWatch logs with "
+                    "NULL Aws::CloudWatchLogs::LogService instance.");
       return;
     }
     if (ShouldSendToCloudWatchLogs(log_msg->level)) {
@@ -95,7 +94,8 @@ void LogNode::RecordLogs(const rosgraph_msgs::Log::ConstPtr & log_msg)
   }
 }
 
-void LogNode::TriggerLogPublisher(const ros::TimerEvent &) {
+void LogNode::TriggerLogPublisher()
+{
   this->log_service_->publishBatchedData();
 }
 
@@ -104,25 +104,27 @@ bool LogNode::ShouldSendToCloudWatchLogs(const int8_t log_severity_level)
   return log_severity_level >= this->min_log_severity_;
 }
 
-const std::string LogNode::FormatLogs(const rosgraph_msgs::Log::ConstPtr & log_msg)
+const std::string LogNode::FormatLogs(const rcl_interfaces::msg::Log::SharedPtr log_msg)
 {
   std::stringstream ss;
-  ss << log_msg->header.stamp << " ";
+  ss << std::chrono::duration_cast<std::chrono::duration<double>>(
+       std::chrono::seconds(log_msg->stamp.sec) + std::chrono::nanoseconds(log_msg->stamp.nanosec)
+     ).count() << " ";
 
   switch (log_msg->level) {
-    case rosgraph_msgs::Log::FATAL:
+    case rcl_interfaces::msg::Log::FATAL:
       ss << "FATAL ";
       break;
-    case rosgraph_msgs::Log::ERROR:
+    case rcl_interfaces::msg::Log::ERROR:
       ss << "ERROR ";
       break;
-    case rosgraph_msgs::Log::WARN:
+    case rcl_interfaces::msg::Log::WARN:
       ss << "WARN ";
       break;
-    case rosgraph_msgs::Log::DEBUG:
+    case rcl_interfaces::msg::Log::DEBUG:
       ss << "DEBUG ";
       break;
-    case rosgraph_msgs::Log::INFO:
+    case rcl_interfaces::msg::Log::INFO:
       ss << "INFO ";
       break;
     default:
@@ -130,19 +132,8 @@ const std::string LogNode::FormatLogs(const rosgraph_msgs::Log::ConstPtr & log_m
   }
   ss << "[node name: " << log_msg->name << "] ";
 
-  ss << "[topics: ";
-  std::vector<std::string>::const_iterator it = log_msg->topics.begin();
-  std::vector<std::string>::const_iterator end = log_msg->topics.end();
-  for (; it != end; ++it) {
-    const std::string & topic = *it;
-
-    if (it != log_msg->topics.begin()) {
-      ss << ", ";
-    }
-
-    ss << topic;
-  }
-  ss << "] " << log_msg->msg << "\n";
+  ss << log_msg->msg << "\n";
+  std::cout << log_msg->msg << std::endl;
 
   return ss.str();
 }

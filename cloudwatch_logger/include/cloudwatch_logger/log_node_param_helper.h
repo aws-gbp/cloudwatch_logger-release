@@ -18,8 +18,8 @@
 #include <cloudwatch_logs_common/cloudwatch_options.h>
 #include <aws_common/sdk_utils/aws_error.h>
 #include <aws_common/sdk_utils/parameter_reader.h>
-#include <ros/ros.h>
-#include <rosgraph_msgs/Log.h>
+#include <rclcpp/rclcpp.hpp>
+#include <rcl_interfaces/msg/log.hpp>
 #include <unordered_set>
 
 namespace Aws {
@@ -27,7 +27,7 @@ namespace CloudWatchLogs {
 namespace Utils {
 
 constexpr int kNodeSubQueueSize = 100;
-constexpr char kNodeRosoutAggregatedTopicName[] = "rosout_agg";
+constexpr char kNodeRosoutAggregatedTopicName[] = "rosout";
 
 constexpr char kNodeParamLogStreamNameKey[] = "log_stream_name";
 constexpr char kNodeParamPublishFrequencyKey[] = "publish_frequency";
@@ -53,7 +53,7 @@ constexpr char kNodeParamStorageLimit[] = "storage_limit";
 
 constexpr char kNodeLogGroupNameDefaultValue[] = "ros_log_group";
 constexpr char kNodeLogStreamNameDefaultValue[] = "ros_log_stream";
-constexpr int8_t kNodeMinLogVerbosityDefaultValue = rosgraph_msgs::Log::DEBUG;
+constexpr int8_t kNodeMinLogVerbosityDefaultValue = rcl_interfaces::msg::Log::DEBUG;
 constexpr double kNodePublishFrequencyDefaultValue = 5.0;
 constexpr bool kNodeSubscribeToRosoutDefaultValue = true;
 
@@ -131,9 +131,9 @@ Aws::AwsError ReadMinLogVerbosity(
 Aws::AwsError ReadSubscriberList(
   bool subscribe_to_rosout,
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
-  boost::function<void(const rosgraph_msgs::Log::ConstPtr &)> callback,
-  ros::NodeHandle & nh,
-  std::vector<ros::Subscriber> & subscriptions);
+  std::function<void(const rcl_interfaces::msg::Log::SharedPtr)> callback,
+  rclcpp::Node::SharedPtr nh,
+  std::vector<rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr> & subscriptions);
   
 /**
  * Fetch the set of node names to ignore incoming logs from. 

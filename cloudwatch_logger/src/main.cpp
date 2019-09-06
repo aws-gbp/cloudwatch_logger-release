@@ -17,8 +17,7 @@
 #include <aws_common/sdk_utils/client_configuration_provider.h>
 #include <cloudwatch_logger/log_node.h>
 #include <cloudwatch_logger/log_node_param_helper.h>
-#include <ros/ros.h>
-#include <rosgraph_msgs/Log.h>
+#include <rclcpp/rclcpp.hpp>
 #include <iostream>
 #include <unordered_set>
 #include <string>
@@ -31,9 +30,18 @@ constexpr char kNodeName[] = "cloudwatch_logger";
 
 int main(int argc, char ** argv)
 {
+  rclcpp::init(argc, argv);
+
+  rclcpp::NodeOptions node_options;
+  node_options.allow_undeclared_parameters(true);
+  node_options.automatically_declare_parameters_from_overrides(true);
+  rclcpp::Node::SharedPtr nh = std::make_shared<rclcpp::Node>(kNodeName, node_options);
+
   Aws::Utils::Logging::InitializeAWSLogging(
-    Aws::MakeShared<Aws::Utils::Logging::AWSROSLogger>(kNodeName));
-  ros::init(argc, argv, kNodeName);
+    Aws::MakeShared<Aws::Utils::Logging::AWSROSLogger>(
+      kNodeName,
+      Aws::Utils::Logging::LogLevel::Debug,
+      nh));
   AWS_LOGSTREAM_INFO(__func__, "Starting " << kNodeName << "...");
 
   // required values
@@ -42,14 +50,13 @@ int main(int argc, char ** argv)
   std::string log_stream;
   bool subscribe_to_rosout;
   int8_t min_log_verbosity;
-  std::vector<ros::Subscriber> subscriptions;
+  std::vector<rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr> subscriptions;
   std::unordered_set<std::string> ignore_nodes;
   Aws::CloudWatchLogs::CloudWatchOptions cloudwatch_options;
 
-  ros::NodeHandle nh;
 
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader =
-    std::make_shared<Aws::Client::Ros1NodeParameterReader>();
+    std::make_shared<Aws::Client::Ros2NodeParameterReader>(nh);
 
   // checking configurations to set values or set to default values;
   ReadPublishFrequency(parameter_reader, publish_frequency);
@@ -70,15 +77,22 @@ int main(int argc, char ** argv)
   Aws::CloudWatchLogs::Utils::LogNode cloudwatch_logger(min_log_verbosity, ignore_nodes);
   cloudwatch_logger.Initialize(log_group, log_stream, config, sdk_options, cloudwatch_options);
 
-  ros::ServiceServer service = nh.advertiseService(kNodeName,
-                                                   &Aws::CloudWatchLogs::Utils::LogNode::checkIfOnline,
-                                                   &cloudwatch_logger);
+  std::function<bool(const std::shared_ptr<rmw_request_id_t>,
+                     const std_srvs::srv::Trigger::Request::SharedPtr,
+                     std_srvs::srv::Trigger::Response::SharedPtr)>
+  check_if_online = [&cloudwatch_logger](const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+                                         const std_srvs::srv::Trigger::Request::SharedPtr request,
+                                         std_srvs::srv::Trigger::Response::SharedPtr response) -> bool {
+    return cloudwatch_logger.checkIfOnline(*request, *response);
+  };
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr service
+    = nh->create_service<std_srvs::srv::Trigger>(kNodeName, check_if_online);
 
   cloudwatch_logger.start();
 
   // callback function
-  boost::function<void(const rosgraph_msgs::Log::ConstPtr &)> callback;
-  callback = [&cloudwatch_logger](const rosgraph_msgs::Log::ConstPtr & log_msg) -> void {
+  std::function<void(const rcl_interfaces::msg::Log::SharedPtr)> callback;
+  callback = [&cloudwatch_logger](const rcl_interfaces::msg::Log::SharedPtr log_msg) -> void {
     cloudwatch_logger.RecordLogs(log_msg);
   };
 
@@ -87,23 +101,24 @@ int main(int argc, char ** argv)
   AWS_LOGSTREAM_INFO(__func__, "Initialized " << kNodeName << ".");
 
   bool publish_when_size_reached = cloudwatch_options.uploader_options.batch_trigger_publish_size
-    != Aws::DataFlow::kDefaultUploaderOptions.batch_trigger_publish_size;
+                                   != Aws::DataFlow::kDefaultUploaderOptions.batch_trigger_publish_size;
 
-  ros::Timer timer;
+  rclcpp::WallTimer<std::function<void()>>::SharedPtr timer;
   // Publish on a timer if we are not publishing on a size limit.
   if (!publish_when_size_reached) {
-    timer =
-      nh.createTimer(ros::Duration(publish_frequency),
-                     &Aws::CloudWatchLogs::Utils::LogNode::TriggerLogPublisher,
-                     &cloudwatch_logger);
+    std::function<void()> trigger_log_publisher = [&cloudwatch_logger]() {
+      cloudwatch_logger.TriggerLogPublisher();
+    };
+    timer = nh->create_wall_timer(std::chrono::duration<double>(publish_frequency),
+                                  trigger_log_publisher);
   }
 
-  ros::spin();
+  rclcpp::spin(nh);
 
   AWS_LOGSTREAM_INFO(__func__, "Shutting down " << kNodeName << ".");
   cloudwatch_logger.shutdown();
   Aws::Utils::Logging::ShutdownAWSLogging();
-  ros::shutdown();
+  rclcpp::shutdown();
 
   return 0;
 }

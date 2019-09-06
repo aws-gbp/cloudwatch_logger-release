@@ -44,9 +44,9 @@ Aws::AwsError ReadPublishFrequency(
     default:
       publish_frequency = kNodePublishFrequencyDefaultValue;
       AWS_LOGSTREAM_ERROR(__func__,
-                         "Error " << ret << " retrieving publish frequency, setting to default value: "
-                         << kNodePublishFrequencyDefaultValue);
-    
+                          "Error " << ret << " retrieving publish frequency, setting to default value: "
+                          << kNodePublishFrequencyDefaultValue);
+
   }
   return ret;
 }
@@ -59,7 +59,7 @@ Aws::AwsError ReadLogGroup(std::shared_ptr<Aws::Client::ParameterReaderInterface
     case Aws::AwsError::AWS_ERR_NOT_FOUND:
       log_group = kNodeLogGroupNameDefaultValue;
       AWS_LOGSTREAM_INFO(__func__,
-                       "Log group name configuration not found, setting to default value: "
+                         "Log group name configuration not found, setting to default value: "
                          << kNodeLogGroupNameDefaultValue);
       break;
     case Aws::AwsError::AWS_ERR_OK:
@@ -68,8 +68,8 @@ Aws::AwsError ReadLogGroup(std::shared_ptr<Aws::Client::ParameterReaderInterface
     default:
       log_group = kNodeLogGroupNameDefaultValue;
       AWS_LOGSTREAM_ERROR(__func__,
-                         "Error " << ret << "retrieving log group name configuration, setting to default value: "
-                         << kNodeLogGroupNameDefaultValue);
+                          "Error " << ret << "retrieving log group name configuration, setting to default value: "
+                          << kNodeLogGroupNameDefaultValue);
   }
   return ret;
 }
@@ -91,8 +91,8 @@ Aws::AwsError ReadLogStream(std::shared_ptr<Aws::Client::ParameterReaderInterfac
     default:
       log_stream = kNodeLogStreamNameDefaultValue;
       AWS_LOGSTREAM_ERROR(__func__,
-                         "Error " << ret << "retrieving log stream name configuration, setting to default value: "
-                         << kNodeLogStreamNameDefaultValue);
+                          "Error " << ret << "retrieving log stream name configuration, setting to default value: "
+                          << kNodeLogStreamNameDefaultValue);
   }
   return ret;
 }
@@ -107,20 +107,20 @@ Aws::AwsError ReadSubscribeToRosout(
     case Aws::AwsError::AWS_ERR_NOT_FOUND:
       subscribe_to_rosout = kNodeSubscribeToRosoutDefaultValue;
       AWS_LOGSTREAM_INFO(
-      __func__,
-      "Whether to subscribe to rosout_agg topic configuration not found, setting to default value: "
+        __func__,
+        "Whether to subscribe to rosout_agg topic configuration not found, setting to default value: "
         << kNodeSubscribeToRosoutDefaultValue);
       break;
     case Aws::AwsError::AWS_ERR_OK:
       AWS_LOGSTREAM_INFO(
-      __func__, "Whether to subscribe to rosout_agg topic is set to: " << subscribe_to_rosout);
+        __func__, "Whether to subscribe to rosout_agg topic is set to: " << subscribe_to_rosout);
       break;
     default:
       subscribe_to_rosout = kNodeSubscribeToRosoutDefaultValue;
       AWS_LOGSTREAM_ERROR(
         __func__,
-        "Error " << ret 
-        << "retrieving parameter for whether to subscribe to rosout_agg topic configuration " 
+        "Error " << ret
+        << "retrieving parameter for whether to subscribe to rosout_agg topic configuration "
         << ", setting to default value: " << kNodeSubscribeToRosoutDefaultValue);
   }
   return ret;
@@ -138,35 +138,35 @@ Aws::AwsError ReadMinLogVerbosity(
   switch (ret) {
     case Aws::AwsError::AWS_ERR_NOT_FOUND:
       AWS_LOGSTREAM_INFO(__func__, "Log verbosity configuration not found, setting to default value: "
-                                   << kNodeMinLogVerbosityDefaultValue);
+                         << kNodeMinLogVerbosityDefaultValue);
       break;
     case Aws::AwsError::AWS_ERR_OK:
       if ("DEBUG" == specified_verbosity) {
-        min_log_verbosity = rosgraph_msgs::Log::DEBUG;
+        min_log_verbosity = rcl_interfaces::msg::Log::DEBUG;
         AWS_LOG_INFO(__func__, "Log verbosity is set to DEBUG.");
       } else if ("INFO" == specified_verbosity) {
-        min_log_verbosity = rosgraph_msgs::Log::INFO;
+        min_log_verbosity = rcl_interfaces::msg::Log::INFO;
         AWS_LOG_INFO(__func__, "Log verbosity is set to INFO.");
       } else if ("WARN" == specified_verbosity) {
-        min_log_verbosity = rosgraph_msgs::Log::WARN;
+        min_log_verbosity = rcl_interfaces::msg::Log::WARN;
         AWS_LOG_INFO(__func__, "Log verbosity is set to WARN.");
       } else if ("ERROR" == specified_verbosity) {
-        min_log_verbosity = rosgraph_msgs::Log::ERROR;
+        min_log_verbosity = rcl_interfaces::msg::Log::ERROR;
         AWS_LOG_INFO(__func__, "Log verbosity is set to ERROR.");
       } else if ("FATAL" == specified_verbosity) {
-        min_log_verbosity = rosgraph_msgs::Log::FATAL;
+        min_log_verbosity = rcl_interfaces::msg::Log::FATAL;
         AWS_LOG_INFO(__func__, "Log verbosity is set to FATAL.");
       } else {
         ret = AwsError::AWS_ERR_PARAM;
         AWS_LOGSTREAM_INFO(__func__,
-                          "Log verbosity configuration not valid, setting to default value: "
+                           "Log verbosity configuration not valid, setting to default value: "
                            << kNodeMinLogVerbosityDefaultValue);
       }
       break;
     default:
-      AWS_LOGSTREAM_ERROR(__func__, 
-        "Error " << ret << " retrieving log verbosity configuration, setting to default value: "
-        << kNodeMinLogVerbosityDefaultValue);
+      AWS_LOGSTREAM_ERROR(__func__,
+                          "Error " << ret << " retrieving log verbosity configuration, setting to default value: "
+                          << kNodeMinLogVerbosityDefaultValue);
   }
   return ret;
 }
@@ -174,20 +174,22 @@ Aws::AwsError ReadMinLogVerbosity(
 Aws::AwsError ReadSubscriberList(
   const bool subscribe_to_rosout,
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
-  boost::function<void(const rosgraph_msgs::Log::ConstPtr &)> callback,
-  ros::NodeHandle & nh,
-  std::vector<ros::Subscriber> & subscriptions)
+  std::function<void(const rcl_interfaces::msg::Log::SharedPtr)> callback,
+  rclcpp::Node::SharedPtr nh,
+  std::vector<rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr> & subscriptions)
 {
   std::vector<std::string> topics;
   Aws::AwsError ret = parameter_reader->ReadParam(ParameterPath(kNodeParamLogTopicsListKey), topics);
 
-  for (const std::string& topic : topics) {
-    ros::Subscriber sub = nh.subscribe(topic, kNodeSubQueueSize, callback);
+  for (const std::string & topic : topics) {
+    rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr sub
+      = nh->create_subscription<rcl_interfaces::msg::Log>(topic, kNodeSubQueueSize, callback);
     AWS_LOGSTREAM_INFO(__func__, "Subscribing to topic: " << topic);
     subscriptions.push_back(sub);
   }
   if (subscribe_to_rosout) {
-    ros::Subscriber sub = nh.subscribe(kNodeRosoutAggregatedTopicName, kNodeSubQueueSize, callback);
+    rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr sub
+      = nh->create_subscription<rcl_interfaces::msg::Log>(kNodeRosoutAggregatedTopicName, kNodeSubQueueSize, callback);
     AWS_LOG_INFO(__func__, "Subscribing to rosout_agg");
     subscriptions.push_back(sub);
   }
@@ -209,16 +211,17 @@ Aws::AwsError ReadIgnoreNodesSet(
       }
       break;
     default:
-      AWS_LOGSTREAM_ERROR(__func__, 
-        "Error " << ret << " retrieving retrieving list of nodes to ignore.");
+      AWS_LOGSTREAM_ERROR(__func__,
+                          "Error " << ret << " retrieving retrieving list of nodes to ignore.");
   }
-  
+
   return ret;
 }
 
 void ReadCloudWatchOptions(
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
-  Aws::CloudWatchLogs::CloudWatchOptions & cloudwatch_options) {
+  Aws::CloudWatchLogs::CloudWatchOptions & cloudwatch_options)
+{
 
   Aws::DataFlow::UploaderOptions uploader_options;
   Aws::FileManagement::FileManagerStrategyOptions file_manager_strategy_options;
@@ -234,7 +237,8 @@ void ReadCloudWatchOptions(
 
 void ReadUploaderOptions(
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
-  Aws::DataFlow::UploaderOptions & uploader_options) {
+  Aws::DataFlow::UploaderOptions & uploader_options)
+{
 
   ReadOption(
     parameter_reader,
@@ -274,7 +278,8 @@ void ReadUploaderOptions(
 
 void ReadFileManagerStrategyOptions(
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
-  Aws::FileManagement::FileManagerStrategyOptions & file_manager_strategy_options) {
+  Aws::FileManagement::FileManagerStrategyOptions & file_manager_strategy_options)
+{
 
   ReadOption(
     parameter_reader,
@@ -311,7 +316,8 @@ void ReadOption(
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
   const std::string & option_key,
   const std::string & default_value,
-  std::string & option_value) {
+  std::string & option_value)
+{
   Aws::AwsError ret = parameter_reader->ReadParam(ParameterPath(option_key), option_value);
   switch (ret) {
     case Aws::AwsError::AWS_ERR_NOT_FOUND:
@@ -325,7 +331,7 @@ void ReadOption(
     default:
       option_value = default_value;
       AWS_LOGSTREAM_ERROR(__func__,
-        "Error " << ret << " retrieving option " << option_key << ", setting to default value: " << default_value);
+                          "Error " << ret << " retrieving option " << option_key << ", setting to default value: " << default_value);
   }
 }
 
@@ -333,7 +339,8 @@ void ReadOption(
   std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
   const std::string & option_key,
   const size_t & default_value,
-  size_t & option_value) {
+  size_t & option_value)
+{
   int return_value = 0;
   Aws::AwsError ret = parameter_reader->ReadParam(ParameterPath(option_key), return_value);
   switch (ret) {
@@ -349,7 +356,7 @@ void ReadOption(
     default:
       option_value = default_value;
       AWS_LOGSTREAM_ERROR(__func__,
-        "Error " << ret << " retrieving option " << option_key << ", setting to default value: " << default_value);
+                          "Error " << ret << " retrieving option " << option_key << ", setting to default value: " << default_value);
   }
 }
 
