@@ -1,3 +1,26 @@
+## cloudwatch_logger (dashing) - 3.0.0-2
+
+The packages in the `cloudwatch_logger` repository were released into the `dashing` distro by running `/usr/bin/bloom-release -t dashing -r dashing cloudwatch_logger` on `Sun, 08 Sep 2019 18:57:06 -0000`
+
+The `cloudwatch_logger` package was released.
+
+Version of package(s) in repository `cloudwatch_logger`:
+
+- upstream repository: https://github.com/aws-robotics/cloudwatchlogs-ros2.git
+- release repository: https://github.com/aws-gbp/cloudwatch_logger-release.git
+- rosdistro version: `3.0.0-1`
+- old version: `3.0.0-1`
+- new version: `3.0.0-2`
+
+Versions of tools used:
+
+- bloom version: `0.8.0`
+- catkin_pkg version: `0.4.13`
+- rosdep version: `0.15.2`
+- rosdistro version: `0.7.4`
+- vcstools version: `0.1.42`
+
+
 ## cloudwatch_logger (dashing) - 3.0.0-1
 
 The packages in the `cloudwatch_logger` repository were released into the `dashing` distro by running `/home/ANT.AMAZON.COM/miaofei/.local/bin/bloom-release cloudwatch_logger --track dashing --rosdistro dashing -e` on `Fri, 06 Sep 2019 23:48:18 -0000`
