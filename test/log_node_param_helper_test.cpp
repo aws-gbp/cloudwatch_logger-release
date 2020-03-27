@@ -21,7 +21,6 @@
 
 using namespace Aws::Client;
 using namespace Aws::CloudWatchLogs::Utils;
-using ::testing::_;
 using ::testing::Eq;
 using ::testing::A;
 using ::testing::InSequence;
@@ -250,6 +249,41 @@ TEST_F(LogNodeParamHelperFixture, TestReadReadMinLogVerbosity)
     param = rosgraph_msgs::Log::FATAL + 1 ;
     EXPECT_EQ(AwsError::AWS_ERR_PARAM, ReadMinLogVerbosity(param_reader_, param));
     EXPECT_EQ(kNodeMinLogVerbosityDefaultValue, param);
+}
+
+TEST_F(LogNodeParamHelperFixture, TestPublishTopicNames)
+{
+    {
+      InSequence read_param_seq;
+
+      EXPECT_CALL(*param_reader_, ReadParam(Eq(ParameterPath(kNodeParamPublishTopicNamesKey)), A<bool &>()))
+        .WillOnce(Return(AwsError::AWS_ERR_FAILURE));
+
+      EXPECT_CALL(*param_reader_, ReadParam(Eq(ParameterPath(kNodeParamPublishTopicNamesKey)), A<bool &>()))
+        .WillOnce(Return(AwsError::AWS_ERR_NOT_FOUND)); 
+
+      EXPECT_CALL(*param_reader_, ReadParam(Eq(ParameterPath(kNodeParamPublishTopicNamesKey)), A<bool &>()))
+        .WillOnce(DoAll(SetArgReferee<1>(true), Return(AwsError::AWS_ERR_OK)));
+
+      EXPECT_CALL(*param_reader_, ReadParam(Eq(ParameterPath(kNodeParamPublishTopicNamesKey)), A<bool &>()))
+        .WillOnce(DoAll(SetArgReferee<1>(false), Return(AwsError::AWS_ERR_OK)));
+    }
+
+    bool param = false;
+    EXPECT_EQ(AwsError::AWS_ERR_FAILURE, ReadPublishTopicNames(param_reader_, param));
+    EXPECT_EQ(kNodePublishTopicNamesDefaultValue, param);
+
+    param = false;
+    EXPECT_EQ(AwsError::AWS_ERR_NOT_FOUND, ReadPublishTopicNames(param_reader_, param));
+    EXPECT_EQ(kNodePublishTopicNamesDefaultValue, param);
+
+    param = false;
+    EXPECT_EQ(AwsError::AWS_ERR_OK, ReadPublishTopicNames(param_reader_, param));
+    EXPECT_EQ(true, param);
+
+    param = true;
+    EXPECT_EQ(AwsError::AWS_ERR_OK, ReadPublishTopicNames(param_reader_, param));
+    EXPECT_EQ(false, param);
 }
 
 AwsError MockReadParamAddStringToList(const ParameterPath & param_path, std::vector<std::string> & out)
