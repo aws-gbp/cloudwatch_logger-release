@@ -1,7 +1,11 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 2.8.3)
 project(cloudwatch_logger)
 
-# Add support for C++14
+# Default to C11
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 11)
+endif()
+# Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
@@ -23,123 +27,137 @@ if(NOT DEFINED CXX_DISABLE_WERROR)
 endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_CXX_FLAGS}")
 
-find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(rcl_interfaces REQUIRED)
-find_package(std_srvs REQUIRED)
-find_package(aws_common REQUIRED)
-find_package(aws_ros2_common REQUIRED)
-find_package(cloudwatch_logs_common REQUIRED)
+## Compile as C++11, supported in ROS Kinetic and newer
+set(CMAKE_CXX_STANDARD 11)
+
 find_package(dataflow_lite REQUIRED)
 find_package(file_management REQUIRED)
+find_package(cloudwatch_logs_common REQUIRED)
 
-set(CLOUDWATCH_LOGGER_LIBRARY_TARGET ${PROJECT_NAME}_lib)
+## Find catkin macros and libraries
+find_package(catkin REQUIRED COMPONENTS
+    cloudwatch_logs_common
+    roscpp
+    aws_common
+    aws_ros1_common
+    rosgraph_msgs
+    std_srvs
+    std_msgs)
 
+###################################
+## catkin specific configuration ##
+###################################
+
+catkin_package()
 
 ###########
 ## Build ##
 ###########
 
-add_library(${CLOUDWATCH_LOGGER_LIBRARY_TARGET}
-        src/log_node.cpp
-        src/log_node_param_helper.cpp
-        )
-ament_target_dependencies(${CLOUDWATCH_LOGGER_LIBRARY_TARGET}
-        rclcpp
-        rcl_interfaces
-        std_msgs
-        std_srvs
-        aws_common
-        aws_ros2_common
-        AWSSDK
-        cloudwatch_logs_common
-        dataflow_lite
-        file_management
-        )
-## Specify additional locations of header files
-include_directories(
-        include
-        )
-
 ## Declare a C++ executable
-add_executable(${PROJECT_NAME}
-        src/main.cpp
-        )
-target_link_libraries(${PROJECT_NAME}
-        ${CLOUDWATCH_LOGGER_LIBRARY_TARGET}
-        )
+add_library(${PROJECT_NAME}_lib SHARED src/log_node.cpp src/log_node_param_helper.cpp)
 
+target_include_directories(${PROJECT_NAME}_lib PUBLIC include ${catkin_INCLUDE_DIRS} ${dataflow_lite_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES} ${cloudwatch_logs_common_LIBRARIES})
+
+target_include_directories(${PROJECT_NAME}_lib PUBLIC include ${catkin_INCLUDE_DIRS} ${file_management_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES} ${file_management_LIBRARIES})
+
+target_include_directories(${PROJECT_NAME}_lib PUBLIC include ${catkin_INCLUDE_DIRS} ${cloudwatch_logs_common_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME}_lib ${catkin_LIBRARIES} ${cloudwatch_logs_common_LIBRARIES})
+
+add_executable(${PROJECT_NAME} src/main.cpp)
+target_include_directories(${PROJECT_NAME} PRIVATE include ${catkin_INCLUDE_DIRS} ${cloudwatch_logs_common_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_lib ${cloudwatch_logs_common_LIBRARIES})
 
 #############
 ## Install ##
 #############
+install(TARGETS ${PROJECT_NAME}
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+        
+install(TARGETS ${PROJECT_NAME}_lib
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-install(TARGETS ${PROJECT_NAME} ${CLOUDWATCH_LOGGER_LIBRARY_TARGET}
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        RUNTIME DESTINATION lib/${PROJECT_NAME}
-        )
-install(DIRECTORY include/
-        DESTINATION include
-        FILES_MATCHING PATTERN "*.h"
-        )
-install(DIRECTORY config/
-        DESTINATION share/${PROJECT_NAME}/config
-        )
-install(DIRECTORY launch/
-        DESTINATION share/${PROJECT_NAME}/launch
-        )
-
-ament_export_include_directories(include)
-
-ament_export_dependencies(ament_cmake)
-ament_export_dependencies(rcl_interfaces)
-ament_export_dependencies(rclcpp)
-ament_export_dependencies(aws_common)
-ament_export_dependencies(aws_ros2_common)
-ament_export_dependencies(cloudwatch_logs_common)
-ament_export_dependencies(dataflow_lite)
-ament_export_dependencies(file_management)
-
-ament_package()
-
+install(DIRECTORY config launch
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 #############
-## Tests ##
+## Testing ##
 #############
 
-if(BUILD_TESTING)
-  find_package(ament_cmake_gmock REQUIRED)
-  
-  ament_add_gmock(test_log_node
-          test/log_node_test.cpp
-          )
-  target_include_directories(test_log_node PRIVATE
-          include
-          ${cloudwatch_logs_common_INCLUDE_DIRS}
-          ${dataflow_lite_INCLUDE_DIRS}
-          ${file_management_INCLUDE_DIRS}
-          ${AWSSDK_INCLUDE_DIRS}
-          ${aws_common_INCLUDE_DIRS}
-          ${rclcpp_INCLUDE_DIRS}
-          )
-  target_link_libraries(test_log_node
-          ${CLOUDWATCH_LOGGER_LIBRARY_TARGET}
-          )
+## Add gtest based cpp test target and link libraries
+if(CATKIN_ENABLE_TESTING)
+  find_package(rostest REQUIRED)
+  find_package(GMock QUIET)
+  if(GMOCK_FOUND)
+    add_rostest_gmock(test_log_node
+      test/test_log_node.test
+      test/log_node_test.cpp
+    )
+    target_include_directories(test_log_node PRIVATE
+      include
+      ${catkin_INCLUDE_DIRS}
+      ${cloudwatch_logger_INCLUDE_DIRS}
+      ${GMOCK_INCLUDE_DIRS}
+    )
+    target_link_libraries(test_log_node
+      ${PROJECT_NAME}_lib
+      ${catkin_LIBRARIES}
+      ${GMOCK_BOTH_LIBRARIES}
+    )
 
-  ament_add_gmock(test_log_node_param_helper
-          test/log_node_param_helper_test.cpp
-          )
-  target_include_directories(test_log_node_param_helper PRIVATE
-          include
-          ${cloudwatch_logs_common_INCLUDE_DIRS}
-          ${dataflow_lite_INCLUDE_DIRS}
-          ${file_management_INCLUDE_DIRS}
-          ${AWSSDK_INCLUDE_DIRS}
-          ${aws_common_INCLUDE_DIRS}
-          ${rclcpp_INCLUDE_DIRS}
-          )
-  target_link_libraries(test_log_node_param_helper
-          ${CLOUDWATCH_LOGGER_LIBRARY_TARGET}
-          )
+    add_rostest_gmock(test_log_node_param_helper
+      test/test_log_node_param_helper.test
+      test/log_node_param_helper_test.cpp
+    )
+    target_include_directories(test_log_node_param_helper PRIVATE
+      include
+      ${catkin_INCLUDE_DIRS}
+      ${cloudwatch_logger_INCLUDE_DIRS}
+      ${GMOCK_INCLUDE_DIRS}
+    )
+    target_link_libraries(test_log_node_param_helper
+      ${PROJECT_NAME}_lib
+      ${catkin_LIBRARIES}
+      ${GMOCK_BOTH_LIBRARIES}
+    )
+  else()
+    include_directories(/usr/include/gmock /usr/src/gmock)
+    add_library(${PROJECT_NAME}_libgmock SHARED /usr/src/gmock/src/gmock-all.cc)
+
+    add_rostest_gtest(test_log_node
+      test/test_log_node.test
+      test/log_node_test.cpp
+    )
+    target_include_directories(test_log_node PRIVATE
+      include
+      ${catkin_INCLUDE_DIRS}
+      ${cloudwatch_logger_INCLUDE_DIRS}
+    )
+    target_link_libraries(test_log_node
+      ${PROJECT_NAME}_lib
+      ${catkin_LIBRARIES}
+      ${PROJECT_NAME}_libgmock
+    )
+
+    add_rostest_gtest(test_log_node_param_helper
+      test/test_log_node_param_helper.test
+      test/log_node_param_helper_test.cpp
+    )
+    target_include_directories(test_log_node_param_helper PRIVATE
+      include
+      ${catkin_INCLUDE_DIRS}
+      ${cloudwatch_logger_INCLUDE_DIRS}
+    )
+    target_link_libraries(test_log_node_param_helper
+      ${PROJECT_NAME}_lib
+      ${catkin_LIBRARIES}
+      ${PROJECT_NAME}_libgmock
+    )
+  endif()
 endif()

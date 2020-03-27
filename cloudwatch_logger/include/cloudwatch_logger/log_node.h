@@ -16,15 +16,15 @@
 #pragma once
 
 #include <aws_common/sdk_utils/client_configuration_provider.h>
-#include <aws_ros2_common/sdk_utils/logging/aws_ros_logger.h>
-#include <aws_ros2_common/sdk_utils/ros2_node_parameter_reader.h>
+#include <aws_ros1_common/sdk_utils/logging/aws_ros_logger.h>
+#include <aws_ros1_common/sdk_utils/ros1_node_parameter_reader.h>
 #include <cloudwatch_logs_common/log_service.h>
 #include <cloudwatch_logs_common/log_service_factory.h>
-#include <rclcpp/rclcpp.hpp>
-#include <rcl_interfaces/msg/log.hpp>
+#include <ros/ros.h>
+#include <rosgraph_msgs/Log.h>
 #include <unordered_set>
-#include <std_srvs/srv/trigger.hpp>
-#include <std_srvs/srv/empty.hpp>
+#include <std_srvs/Trigger.h>
+#include <std_srvs/Empty.h>
 
 namespace Aws {
 namespace CloudWatchLogs {
@@ -33,8 +33,29 @@ namespace Utils {
 class LogNode : public Service
 {
 public:
+  struct Options {
+    Options() = default;
+
+    template<class UnorderedSet>
+    Options(int8_t severity, bool publish, UnorderedSet && nodes)
+      : min_log_severity(severity),
+        publish_topic_names(publish),
+        ignore_nodes(std::forward<UnorderedSet>(nodes)) {}
+
+    int8_t min_log_severity = rosgraph_msgs::Log::DEBUG;
+    bool publish_topic_names = true;
+    std::unordered_set<std::string> ignore_nodes;
+  };
+
   /**
-   * @brief Creates a new CloudWatchLogNode
+   * Creates a new CloudWatchLogNode
+   *
+   * @param options an options struct that specifies some behaviors of this CloudWatchLogNode
+   */
+  explicit LogNode(const Options & options);
+
+  /**
+   * @deprecated Creates a new CloudWatchLogNode
    *
    * @param min_log_severity the minimum log severity level defined in the configuration file
    *                         logs with severity level equal or above get sent to CloudWatch Logs
@@ -42,10 +63,14 @@ public:
    */
   explicit LogNode(int8_t min_log_severity, std::unordered_set<std::string> ignore_nodes);
 
+  LogNode(const LogNode & other) = delete;
+
+  LogNode & operator=(const LogNode & other) = delete;
+
   /**
    *  @brief Tears down a AWSCloudWatchLogNode object
    */
-  ~LogNode();
+  ~LogNode() override;
 
   /**
    * @brief Reads creds, region, and SDK option to configure log manager
@@ -59,7 +84,7 @@ public:
   void Initialize(const std::string & log_group, const std::string & log_stream,
                   const Aws::Client::ClientConfiguration & config, Aws::SDKOptions & sdk_options,
                   const Aws::CloudWatchLogs::CloudWatchOptions & cloudwatch_options,
-                  std::shared_ptr<LogServiceFactory> log_service_factory = std::make_shared<LogServiceFactory>());
+                  const std::shared_ptr<LogServiceFactory>& log_service_factory = std::make_shared<LogServiceFactory>());
 
   bool start() override;
   bool shutdown() override;
@@ -69,7 +94,7 @@ public:
    *
    * @param log_msg A log message from the subscribed topic(s)
    */
-  void RecordLogs(const rcl_interfaces::msg::Log::SharedPtr log_msg);
+  void RecordLogs(const rosgraph_msgs::Log::ConstPtr & log_msg);
 
   /**
    * @brief Trigger the log manager to call its Service function to publish logs to cloudwatch
@@ -77,7 +102,7 @@ public:
    *
    * @param timer A ros timer
    */
-  void TriggerLogPublisher();
+  void TriggerLogPublisher(const ros::TimerEvent & /*unused*/);
 
   /**
    * Return a Trigger response detailing the LogService online status.
@@ -86,14 +111,16 @@ public:
    * @param response output response
    * @return true if the request was handled successfully, false otherwise
    */
-  bool checkIfOnline(std_srvs::srv::Trigger::Request & request, std_srvs::srv::Trigger::Response & response);
+  bool checkIfOnline(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response);
 
 private:
   bool ShouldSendToCloudWatchLogs(const int8_t log_severity_level);
-  const std::string FormatLogs(const rcl_interfaces::msg::Log::SharedPtr log_msg);
+  const std::string FormatLogs(const rosgraph_msgs::Log::ConstPtr & log_msg);
+
   std::shared_ptr<Aws::CloudWatchLogs::LogService> log_service_;
   int8_t min_log_severity_;
   std::unordered_set<std::string> ignore_nodes_;
+  bool publish_topic_names_;
 };
 
 }  // namespace Utils
