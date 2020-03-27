@@ -2,8 +2,21 @@
 Changelog for package cloudwatch_logger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.2.1 (2019-07-26)
+2.3.1 (2020-03-27)
 ------------------
+* Fix linting issues found by clang-tidy 6.0 (`#56 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/56>`_)
+  * clang-tidy fixes
+  * clang-tidy linting issues fixed manually
+* Add option to not publish topic names to Cloudwatch Logs (`#58 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/58>`_)
+  * add option to not publish topic names to cloudwatch logs
+  * fix unit test failure
+  * add unit tests, improve code coverage
+  * update documentation
+  * address PR comments
+  * make the deprecated constructor use constructor delegation
+* Merge pull request `#51 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/51>`_ from aws-robotics/restore-tests
+  Restored unit tests
+* Restored unit tests
 * Increment version (`#48 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/48>`_)
   * increment version for binary packaging fix
   Signed-off-by: Miaofei <miaofei@amazon.com>
@@ -75,7 +88,7 @@ Changelog for package cloudwatch_logger
 * Adds a new parameter for a list of node names to ignore logs from. (`#24 <https://github.com/aws-robotics/cloudwatchlogs-ros1/issues/24>`_)
   * Adds a new parameter for a list of node names to ignore logs from.
 * Removing old file that has already been refactored out into separate files.
-* Contributors: AAlon, Devin Bonnie, M. M, Nick Burek, Ryan Newell
+* Contributors: AAlon, Devin Bonnie, M. M, Miaofei Mei, Nick Burek, Ryan Newell
 
 2.0.0 (2019-03-20)
 ------------------

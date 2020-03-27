@@ -18,15 +18,14 @@
 #include <aws/core/utils/logging/LogMacros.h>
 #include <cloudwatch_logs_common/cloudwatch_options.h>
 
-
-using namespace Aws::Client;
+using Aws::Client::ParameterPath;
 
 namespace Aws {
 namespace CloudWatchLogs {
 namespace Utils {
 
 Aws::AwsError ReadPublishFrequency(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   double & publish_frequency)
 {
   Aws::AwsError ret =
@@ -51,7 +50,7 @@ Aws::AwsError ReadPublishFrequency(
   return ret;
 }
 
-Aws::AwsError ReadLogGroup(std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+Aws::AwsError ReadLogGroup(const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
                            std::string & log_group)
 {
   Aws::AwsError ret = parameter_reader->ReadParam(ParameterPath(kNodeParamLogGroupNameKey), log_group);
@@ -74,7 +73,7 @@ Aws::AwsError ReadLogGroup(std::shared_ptr<Aws::Client::ParameterReaderInterface
   return ret;
 }
 
-Aws::AwsError ReadLogStream(std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+Aws::AwsError ReadLogStream(const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
                             std::string & log_stream)
 {
   Aws::AwsError ret = parameter_reader->ReadParam(ParameterPath(kNodeParamLogStreamNameKey), log_stream);
@@ -98,7 +97,7 @@ Aws::AwsError ReadLogStream(std::shared_ptr<Aws::Client::ParameterReaderInterfac
 }
 
 Aws::AwsError ReadSubscribeToRosout(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   bool & subscribe_to_rosout)
 {
   Aws::AwsError ret =
@@ -127,7 +126,7 @@ Aws::AwsError ReadSubscribeToRosout(
 }
 
 Aws::AwsError ReadMinLogVerbosity(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   int8_t & min_log_verbosity)
 {
   min_log_verbosity = kNodeMinLogVerbosityDefaultValue;
@@ -171,10 +170,41 @@ Aws::AwsError ReadMinLogVerbosity(
   return ret;
 }
 
+Aws::AwsError ReadPublishTopicNames(
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
+  bool & publish_topic_names)
+{
+  Aws::AwsError ret =
+    parameter_reader->ReadParam(ParameterPath(kNodeParamPublishTopicNamesKey), publish_topic_names);
+
+  switch (ret) {
+    case Aws::AwsError::AWS_ERR_NOT_FOUND:
+      publish_topic_names = kNodePublishTopicNamesDefaultValue;
+      AWS_LOGSTREAM_INFO(
+      __func__,
+      "Whether to publish topic names to Cloudwatch Logs configuration not found, setting to default value: "
+        << kNodePublishTopicNamesDefaultValue);
+      break;
+    case Aws::AwsError::AWS_ERR_OK:
+      AWS_LOGSTREAM_INFO(
+      __func__, "Whether to publish topic names to Cloudwatch Logs is set to: " << publish_topic_names);
+      break;
+    default:
+      publish_topic_names = kNodePublishTopicNamesDefaultValue;
+      AWS_LOGSTREAM_ERROR(
+        __func__,
+        "Error " << ret 
+        << "retrieving parameter for whether to publish topic names to Cloudwatch Logs" 
+        << ", setting to default value: " << kNodePublishTopicNamesDefaultValue);
+  }
+
+  return ret;
+}
+
 Aws::AwsError ReadSubscriberList(
   const bool subscribe_to_rosout,
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
-  boost::function<void(const rosgraph_msgs::Log::ConstPtr &)> callback,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
+  const boost::function<void(const rosgraph_msgs::Log::ConstPtr &)>& callback,
   ros::NodeHandle & nh,
   std::vector<ros::Subscriber> & subscriptions)
 {
@@ -195,7 +225,7 @@ Aws::AwsError ReadSubscriberList(
 }
 
 Aws::AwsError ReadIgnoreNodesSet(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   std::unordered_set<std::string> & ignore_nodes)
 {
   std::vector<std::string> ignore_list;
@@ -217,10 +247,10 @@ Aws::AwsError ReadIgnoreNodesSet(
 }
 
 void ReadCloudWatchOptions(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   Aws::CloudWatchLogs::CloudWatchOptions & cloudwatch_options) {
 
-  Aws::DataFlow::UploaderOptions uploader_options;
+  Aws::DataFlow::UploaderOptions uploader_options{};
   Aws::FileManagement::FileManagerStrategyOptions file_manager_strategy_options;
 
   ReadUploaderOptions(parameter_reader, uploader_options);
@@ -233,7 +263,7 @@ void ReadCloudWatchOptions(
 }
 
 void ReadUploaderOptions(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   Aws::DataFlow::UploaderOptions & uploader_options) {
 
   ReadOption(
@@ -273,7 +303,7 @@ void ReadUploaderOptions(
 }
 
 void ReadFileManagerStrategyOptions(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   Aws::FileManagement::FileManagerStrategyOptions & file_manager_strategy_options) {
 
   ReadOption(
@@ -308,7 +338,7 @@ void ReadFileManagerStrategyOptions(
 }
 
 void ReadOption(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   const std::string & option_key,
   const std::string & default_value,
   std::string & option_value) {
@@ -330,7 +360,7 @@ void ReadOption(
 }
 
 void ReadOption(
-  std::shared_ptr<Aws::Client::ParameterReaderInterface> parameter_reader,
+  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
   const std::string & option_key,
   const size_t & default_value,
   size_t & option_value) {
@@ -343,7 +373,7 @@ void ReadOption(
                          option_key << " parameter not found, setting to default value: " << default_value);
       break;
     case Aws::AwsError::AWS_ERR_OK:
-      option_value = (size_t)return_value;
+      option_value = static_cast<size_t>(return_value);
       AWS_LOGSTREAM_INFO(__func__, option_key << " is set to: " << option_value);
       break;
     default:
