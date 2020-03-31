@@ -21,8 +21,7 @@
 #include <cloudwatch_logs_common/log_batcher.h>
 #include <cloudwatch_logs_common/log_publisher.h>
 #include <cloudwatch_logs_common/log_service_factory.h>
-#include <rosgraph_msgs/Log.h>
-
+#include <rcl_interfaces/msg/log.hpp>
 #include <utility>
 
 using namespace Aws::CloudWatchLogs;
@@ -38,16 +37,16 @@ using ::testing::InSequence;
 
 class LogServiceFactoryMock : public LogServiceFactory
 {
-  public:
-    MOCK_METHOD5(CreateLogService,
-      std::shared_ptr<LogService>(
-        const std::string & log_group,
-        const std::string & log_stream,
-        const Aws::Client::ClientConfiguration & client_config,
-        const Aws::SDKOptions & sdk_options,
-        const CloudWatchOptions & cloudwatch_option
-      )
-    );
+public:
+  MOCK_METHOD5(CreateLogService,
+               std::shared_ptr<LogService>(
+                 const std::string & log_group,
+                 const std::string & log_stream,
+                 const Aws::Client::ClientConfiguration & client_config,
+                 const Aws::SDKOptions & sdk_options,
+                 const CloudWatchOptions & cloudwatch_option
+               )
+              );
 };
 
 class LogBatcherMock : public LogBatcher
@@ -60,24 +59,24 @@ public:
 class LogPublisherMock : public LogPublisher
 {
 public:
-    LogPublisherMock(const std::string & log_group,
-                     const std::string & log_stream,
-                     const Aws::Client::ClientConfiguration & client_config)
-                      : LogPublisher(log_group, log_stream, client_config) {}
+  LogPublisherMock(const std::string & log_group,
+                   const std::string & log_stream,
+                   const Aws::Client::ClientConfiguration & client_config)
+    : LogPublisher(log_group, log_stream, client_config) {}
 };
 
 class LogServiceMock : public LogService
 {
 public:
-    LogServiceMock(std::shared_ptr<Publisher<LogCollection>> log_publisher,
-               std::shared_ptr<DataBatcher<LogType>> log_batcher,
-               std::shared_ptr<FileUploadStreamer<LogCollection>> log_file_upload_streamer = nullptr)
-               : LogService(std::move(log_publisher), std::move(log_batcher), std::move(log_file_upload_streamer)) {}
+  LogServiceMock(std::shared_ptr<Publisher<LogCollection>> log_publisher,
+                 std::shared_ptr<DataBatcher<LogType>> log_batcher,
+                 std::shared_ptr<FileUploadStreamer<LogCollection>> log_file_upload_streamer = nullptr)
+    : LogService(std::move(log_publisher), std::move(log_batcher), std::move(log_file_upload_streamer)) {}
 
-    MOCK_METHOD1(batchData, bool(const std::string & data_to_batch));
-    MOCK_METHOD0(start, bool());
-    MOCK_METHOD0(shutdown, bool());
-    MOCK_METHOD0(publishBatchedData, bool());
+  MOCK_METHOD1(batchData, bool(const std::string & data_to_batch));
+  MOCK_METHOD0(start, bool());
+  MOCK_METHOD0(shutdown, bool());
+  MOCK_METHOD0(publishBatchedData, bool());
 };
 
 class LogNodeFixture : public ::testing::Test
@@ -90,41 +89,35 @@ protected:
   std::shared_ptr<LogPublisherMock> log_publisher;
   std::shared_ptr<LogNode> log_node;
 
-  rosgraph_msgs::Log log_message_;
+  rcl_interfaces::msg::Log log_message_;
 
   void SetUp() override
   {
     log_message_.name = "NjhkYjRkZjQ3N2Qw";
     log_message_.msg = "ZjQxOGE2MWM5MTFkMWNjMDVkMGY2OTZm";
-    log_message_.level = rosgraph_msgs::Log::DEBUG;
+    log_message_.level = rcl_interfaces::msg::Log::DEBUG;
     Aws::Client::ClientConfiguration config;
 
     log_publisher = std::make_shared<LogPublisherMock>(
-            std::string("test_group"), std::string("test_stream"), config);
+                      std::string("test_group"), std::string("test_stream"), config);
     log_batcher = std::make_shared<LogBatcherMock>();
     log_service = std::make_shared<LogServiceMock>(log_publisher, log_batcher);
     log_service_factory = std::make_shared<LogServiceFactoryMock>();
   }
 
-  std::shared_ptr<LogNode> build_test_subject(
-    int8_t severity_level = rosgraph_msgs::Log::DEBUG,
-    bool publish_topic_names = true,
-    const std::unordered_set<std::string> & ignore_nodes = std::unordered_set<std::string>())
+  std::shared_ptr<LogNode> build_test_subject(int8_t severity_level = rcl_interfaces::msg::Log::DEBUG,
+                                              std::unordered_set<std::string> ignore_nodes = std::unordered_set<std::string>())
   {
-    Aws::CloudWatchLogs::Utils::LogNode::Options logger_options = {
-      severity_level,
-      publish_topic_names,
-      ignore_nodes
-    };
-    return std::make_shared<LogNode>(logger_options);
+    return std::make_shared<LogNode>(severity_level, ignore_nodes);
   }
 
-  rosgraph_msgs::Log::ConstPtr message_to_constptr(rosgraph_msgs::Log log_message)
+  rcl_interfaces::msg::Log::SharedPtr message_to_constptr(const rcl_interfaces::msg::Log & log_message)
   {
-    return boost::make_shared<rosgraph_msgs::Log const>(log_message);
+    return std::make_shared<rcl_interfaces::msg::Log>(log_message);
   }
 
-  void initialize_log_node(std::shared_ptr<LogNode> & ln) {
+  void initialize_log_node(std::shared_ptr<LogNode> & ln)
+  {
 
     log_node = ln;
 
@@ -135,8 +128,8 @@ protected:
     Aws::CloudWatchLogs::CloudWatchOptions cloudwatch_options;
 
     EXPECT_CALL(*log_service_factory,
-        CreateLogService(StrEq(log_group), StrEq(log_stream), Eq(config), _, _))
-      .WillOnce(Return(log_service));
+                CreateLogService(StrEq(log_group), StrEq(log_stream), Eq(config), _, _))
+    .WillOnce(Return(log_service));
 
     log_node->Initialize(log_group, log_stream, config, sdk_options, cloudwatch_options, log_service_factory);
 
@@ -145,9 +138,10 @@ protected:
     log_node->start();
   }
 
-  void TearDown() override {
+  void TearDown() override
+  {
 
-    if(log_node) {
+    if (log_node) {
 
       EXPECT_CALL(*log_service, shutdown()).Times(1);
       log_node->shutdown();
@@ -183,7 +177,7 @@ TEST_F(LogNodeFixture, TestRecordLogsInitialized)
 
 TEST_F(LogNodeFixture, TestRecordLogSevBelowMinSeverity)
 {
-  std::shared_ptr<LogNode> test_subject = build_test_subject(rosgraph_msgs::Log::ERROR);
+  std::shared_ptr<LogNode> test_subject = build_test_subject(rcl_interfaces::msg::Log::ERROR);
 
   initialize_log_node(test_subject);
 
@@ -192,48 +186,28 @@ TEST_F(LogNodeFixture, TestRecordLogSevBelowMinSeverity)
   EXPECT_CALL(*log_service, batchData(_))
   .Times(0);
 
-  log_message_.level = rosgraph_msgs::Log::DEBUG;
+  log_message_.level = rcl_interfaces::msg::Log::DEBUG;
   test_subject->RecordLogs(message_to_constptr(log_message_));
-  log_message_.level = rosgraph_msgs::Log::INFO;
+  log_message_.level = rcl_interfaces::msg::Log::INFO;
   test_subject->RecordLogs(message_to_constptr(log_message_));
-  log_message_.level = rosgraph_msgs::Log::WARN;
-  test_subject->RecordLogs(message_to_constptr(log_message_));
-}
-
-TEST_F(LogNodeFixture, TestDontPublishTopicNames)
-{
-  std::shared_ptr<LogNode> test_subject = build_test_subject(rosgraph_msgs::Log::DEBUG, false);
-  initialize_log_node(test_subject);
-
-  const std::string log_name_reference_str = std::string("[node name: ") + log_message_.name + "]";
-  const std::string log_topics_reference_str = "[topics: ]";
-
-  EXPECT_CALL(*log_service,
-    batchData(AllOf(
-      HasSubstr("DEBUG"),
-      HasSubstr(log_message_.msg),
-      HasSubstr(log_name_reference_str),
-      Not(HasSubstr(log_topics_reference_str))
-      )))
-    .WillOnce(Return(true));
-
+  log_message_.level = rcl_interfaces::msg::Log::WARN;
   test_subject->RecordLogs(message_to_constptr(log_message_));
 }
 
 TEST_F(LogNodeFixture, TestRecordLogSevEqGtMinSeverity)
 {
-  std::shared_ptr<LogNode> test_subject = build_test_subject(rosgraph_msgs::Log::ERROR);
+  std::shared_ptr<LogNode> test_subject = build_test_subject(rcl_interfaces::msg::Log::ERROR);
 
   initialize_log_node(test_subject);
 
   ON_CALL(*log_service, batchData(_))
-    .WillByDefault(Return(true));
+  .WillByDefault(Return(true));
   EXPECT_CALL(*log_service, batchData(_))
-    .Times(2);
+  .Times(2);
 
-  log_message_.level = rosgraph_msgs::Log::ERROR;
+  log_message_.level = rcl_interfaces::msg::Log::ERROR;
   test_subject->RecordLogs(message_to_constptr(log_message_));
-  log_message_.level = rosgraph_msgs::Log::FATAL;
+  log_message_.level = rcl_interfaces::msg::Log::FATAL;
   test_subject->RecordLogs(message_to_constptr(log_message_));
 
   ON_CALL(*log_service, publishBatchedData())
@@ -242,22 +216,21 @@ TEST_F(LogNodeFixture, TestRecordLogSevEqGtMinSeverity)
   .Times(1);
 
   // this is usually called by a timer, manually test
-  ros::TimerEvent timer_event;
-  test_subject->TriggerLogPublisher(timer_event);
+  test_subject->TriggerLogPublisher();
 }
 
 TEST_F(LogNodeFixture, TestRecordLogTopicsOk)
 {
-  std::shared_ptr<LogNode> test_subject = build_test_subject();
+  std::shared_ptr<LogNode> test_subject = build_test_subject(rcl_interfaces::msg::Log::DEBUG);
 
   initialize_log_node(test_subject);
 
-  const char* node_name2 = "zNzQwNjU4NWRi";
+  const char * node_name2 = "zNzQwNjU4NWRi";
   std::ostringstream log_name_reference_stream2;
   log_name_reference_stream2 << "[node name: " << node_name2 << "]";
 
-  const char* topic1 = "ZjlkYmUzOTI5ODA0ZT";
-  const char* topic2 = "jNjIxMWRm";
+  const char * topic1 = "ZjlkYmUzOTI5ODA0ZT";
+  const char * topic2 = "jNjIxMWRm";
   std::ostringstream log_topics_reference_stream2;
   log_topics_reference_stream2 << "[topics: " << topic1 << ", " << topic2 << "] ";
 
@@ -266,43 +239,41 @@ TEST_F(LogNodeFixture, TestRecordLogTopicsOk)
 
     std::ostringstream log_name_reference_stream1;
     log_name_reference_stream1 << "[node name: " << log_message_.name << "]";
-    std::ostringstream log_topics_reference_stream1;
-    log_topics_reference_stream1 << "[topics: ]";
 
     EXPECT_CALL(*log_service,
-      batchData(AllOf(
-        HasSubstr("DEBUG"), HasSubstr(log_message_.msg),
-        HasSubstr(log_name_reference_stream1.str()), HasSubstr(log_topics_reference_stream1.str())
-        )))
-      .WillOnce(Return(true));
+                batchData(AllOf(
+                            HasSubstr("DEBUG"), HasSubstr(log_message_.msg),
+                            HasSubstr(log_name_reference_stream1.str())
+                          )))
+    .WillOnce(Return(true));
 
     EXPECT_CALL(*log_service,
-            batchData(AllOf(
-        HasSubstr("INFO"), HasSubstr(log_message_.msg),
-        HasSubstr(log_name_reference_stream2.str()), HasSubstr(log_topics_reference_stream1.str())
-        )))
-      .WillOnce(Return(true));
+                batchData(AllOf(
+                            HasSubstr("INFO"), HasSubstr(log_message_.msg),
+                            HasSubstr(log_name_reference_stream2.str())
+                          )))
+    .WillOnce(Return(true));
 
     EXPECT_CALL(*log_service,
-            batchData(AllOf(
-        HasSubstr("WARN"), HasSubstr(log_message_.msg),
-        HasSubstr(log_name_reference_stream1.str()), HasSubstr(log_topics_reference_stream2.str())
-        )))
-      .WillOnce(Return(true));
+                batchData(AllOf(
+                            HasSubstr("WARN"), HasSubstr(log_message_.msg),
+                            HasSubstr(log_name_reference_stream1.str())
+                          )))
+    .WillOnce(Return(true));
   }
 
-  log_message_.level = rosgraph_msgs::Log::DEBUG;
+  log_message_.level = rcl_interfaces::msg::Log::DEBUG;
   test_subject->RecordLogs(message_to_constptr(log_message_));
 
-  rosgraph_msgs::Log log_message2 = log_message_;
-  log_message2.level = rosgraph_msgs::Log::INFO;
+  rcl_interfaces::msg::Log log_message2 = log_message_;
+  log_message2.level = rcl_interfaces::msg::Log::INFO;
   log_message2.name = node_name2;
   test_subject->RecordLogs(message_to_constptr(log_message2));
 
-  rosgraph_msgs::Log log_message3 = log_message_;
-  log_message3.topics.push_back(topic1);
-  log_message3.topics.push_back(topic2);
-  log_message3.level = rosgraph_msgs::Log::WARN;
+  rcl_interfaces::msg::Log log_message3 = log_message_;
+  // log_message3.topics.push_back(topic1);
+  // log_message3.topics.push_back(topic2);
+  log_message3.level = rcl_interfaces::msg::Log::WARN;
   test_subject->RecordLogs(message_to_constptr(log_message3));
 }
 
@@ -310,20 +281,21 @@ TEST_F(LogNodeFixture, TestRecordLogIgnoreList)
 {
   std::unordered_set<std::string> ignore_nodes;
   ignore_nodes.emplace(log_message_.name);
-  std::shared_ptr<LogNode> test_subject = build_test_subject(rosgraph_msgs::Log::DEBUG, true, ignore_nodes);
+  std::shared_ptr<LogNode> test_subject = build_test_subject(rcl_interfaces::msg::Log::DEBUG, ignore_nodes);
 
   initialize_log_node(test_subject);
 
   ON_CALL(*log_service, batchData(_))
-    .WillByDefault(Return(true));
+  .WillByDefault(Return(true));
   EXPECT_CALL(*log_service, batchData(_))
-    .Times(0);
+  .Times(0);
 
-  log_message_.level = rosgraph_msgs::Log::INFO;
+  log_message_.level = rcl_interfaces::msg::Log::INFO;
   test_subject->RecordLogs(message_to_constptr(log_message_));
 }
 
-TEST_F(LogNodeFixture, Sanity) {
+TEST_F(LogNodeFixture, Sanity)
+{
   ASSERT_TRUE(true);
 }
 

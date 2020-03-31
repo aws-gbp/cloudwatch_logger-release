@@ -18,8 +18,8 @@
 #include <cloudwatch_logs_common/cloudwatch_options.h>
 #include <aws_common/sdk_utils/aws_error.h>
 #include <aws_common/sdk_utils/parameter_reader.h>
-#include <ros/ros.h>
-#include <rosgraph_msgs/Log.h>
+#include <rclcpp/rclcpp.hpp>
+#include <rcl_interfaces/msg/log.hpp>
 #include <unordered_set>
 
 namespace Aws {
@@ -27,7 +27,7 @@ namespace CloudWatchLogs {
 namespace Utils {
 
 constexpr int kNodeSubQueueSize = 100;
-constexpr char kNodeRosoutAggregatedTopicName[] = "rosout_agg";
+constexpr char kNodeRosoutAggregatedTopicName[] = "rosout";
 
 constexpr char kNodeParamLogStreamNameKey[] = "log_stream_name";
 constexpr char kNodeParamPublishFrequencyKey[] = "publish_frequency";
@@ -35,7 +35,6 @@ constexpr char kNodeParamSubscribeToRosoutKey[] = "sub_to_rosout";
 constexpr char kNodeParamLogGroupNameKey[] = "log_group_name";
 constexpr char kNodeParamLogTopicsListKey[] = "topics";
 constexpr char kNodeParamMinLogVerbosityKey[] = "min_log_verbosity";
-constexpr char kNodeParamPublishTopicNamesKey[] = "publish_topic_names";
 constexpr char kNodeParamIgnoreNodesKey[] = "ignore_nodes";
 
 /** Configuration params for Aws::DataFlow::UploaderOptions **/
@@ -52,13 +51,11 @@ constexpr char kNodeParamFileExtension[] = "file_extension";
 constexpr char kNodeParamMaximumFileSize[] = "maximum_file_size";
 constexpr char kNodeParamStorageLimit[] = "storage_limit";
 
-/** Default values for parameters **/
 constexpr char kNodeLogGroupNameDefaultValue[] = "ros_log_group";
 constexpr char kNodeLogStreamNameDefaultValue[] = "ros_log_stream";
-constexpr int8_t kNodeMinLogVerbosityDefaultValue = rosgraph_msgs::Log::DEBUG;
+constexpr int8_t kNodeMinLogVerbosityDefaultValue = rcl_interfaces::msg::Log::DEBUG;
 constexpr double kNodePublishFrequencyDefaultValue = 5.0;
 constexpr bool kNodeSubscribeToRosoutDefaultValue = true;
-constexpr bool kNodePublishTopicNamesDefaultValue = true;
 
 /**
  * Fetch the parameter for the log publishing frequency.
@@ -120,19 +117,6 @@ Aws::AwsError ReadMinLogVerbosity(
   int8_t & min_log_verbosity);
 
 /**
- * Fetch the parameter for whether or not to include topic name information in the log messsages
- * that are uploaded to AWS CloudWatch Logs.
- *
- * @param parameter_reader to retrieve the parameters from.
- * @param publish_topic_names the parameter is stored here when it is read successfully.
- * @return an error code that indicates whether the parameter was read successfully or not, 
- * as returned by \p parameter_reader
- */
-Aws::AwsError ReadPublishTopicNames(
-  const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
-  bool & publish_topic_names);
-
-/**
  * Fetch the parameter for the list of topics to get logs from, and subscribe \p nh
  * to them. Also subscribe to rout if \p subscribe_to_rosout is true. 
  * 
@@ -147,9 +131,9 @@ Aws::AwsError ReadPublishTopicNames(
 Aws::AwsError ReadSubscriberList(
   bool subscribe_to_rosout,
   const std::shared_ptr<Aws::Client::ParameterReaderInterface>& parameter_reader,
-  const boost::function<void(const rosgraph_msgs::Log::ConstPtr &)>& callback,
-  ros::NodeHandle & nh,
-  std::vector<ros::Subscriber> & subscriptions);
+  std::function<void(const rcl_interfaces::msg::Log::SharedPtr)> callback,
+  const rclcpp::Node::SharedPtr& nh,
+  std::vector<rclcpp::Subscription<rcl_interfaces::msg::Log>::SharedPtr> & subscriptions);
   
 /**
  * Fetch the set of node names to ignore incoming logs from. 
