@@ -1,3 +1,26 @@
+## cloudwatch_logger (melodic) - 2.3.2-1
+
+The packages in the `cloudwatch_logger` repository were released into the `melodic` distro by running `/usr/local/bin/bloom-release cloudwatch_logger --track melodic --rosdistro melodic -e` on `Thu, 17 Feb 2022 05:17:57 -0000`
+
+The `cloudwatch_logger` package was released.
+
+Version of package(s) in repository `cloudwatch_logger`:
+
+- upstream repository: https://github.com/jikawa-az/cloudwatchlogs-ros1.git
+- release repository: https://github.com/aws-gbp/cloudwatch_logger-release.git
+- rosdistro version: `2.3.1-1`
+- old version: `2.3.1-1`
+- new version: `2.3.2-1`
+
+Versions of tools used:
+
+- bloom version: `0.10.7`
+- catkin_pkg version: `0.4.23`
+- rosdep version: `0.20.0`
+- rosdistro version: `0.8.3`
+- vcstools version: `0.1.42`
+
+
 ## cloudwatch_logger (dashing) - 3.0.1-1
 
 The packages in the `cloudwatch_logger` repository were released into the `dashing` distro by running `/usr/local/bin/bloom-release cloudwatch_logger --track dashing --rosdistro dashing -e` on `Tue, 31 Mar 2020 20:08:33 -0000`
