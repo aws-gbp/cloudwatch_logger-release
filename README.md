@@ -8,10 +8,6 @@ The **`cloudwatch_logger`** node wraps the [aws-sdk-c++] in a ROS service API.
 
 **Amazon CloudWatch Logs Summary**: AWS CloudWatch Logs can monitor applications and systems using log data. You can create alarms in CloudWatch and receive notifications of particular API activity as captured by CloudTrail and use the notification to perform troubleshooting. By default, logs are kept indefinitely and never expire. You can adjust the retention policy for each log group, keeping the indefinite retention, or choosing a retention periods between 10 years and one day. AWS CloudWatch Logs stores your log data in highly durable storage.
 
-**Features in Active Development**:
-- Offline caching: now, a batch of logs will be dropped if the node fails to send them to AWS CloudWatch Logs. We will enable offline caching and try to save logs.
-- Send logs to different log groups/streams: now, one node will send logs to one log stream within one log group. We will enable a node to send logs to different log groups/streams.
-
 **Keywords**: ROS Application logs, System logs, AWS CloudWatch Logs service
 
 ### License
@@ -19,20 +15,12 @@ The source code is released under an [Apache 2.0].
 
 **Author**: AWS RoboMaker<br/>
 **Affiliation**: [Amazon Web Services (AWS)]<br/>
-**Maintainer**: AWS RoboMaker, ros-contributions@amazon.com
+
+RoboMaker cloud extensions rely on third-party software licensed under open-source licenses and are provided for demonstration purposes only. Incorporation or use of RoboMaker cloud extensions in connection with your production workloads or commercial product(s) or devices may affect your legal rights or obligations under the applicable open-source licenses. License information for this repository can be found [here](https://github.com/aws-robotics/cloudwatchlogs-ros1/blob/master/LICENSE). AWS does not provide support for this cloud extension. You are solely responsible for how you configure, deploy, and maintain this cloud extension in your workloads or commercial product(s) or devices.
 
 ### Supported ROS Distributions
 - Kinetic
 - Melodic
-
-### Build status
-* Travis CI:
-    * "master" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros1.svg?branch=master)](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros1/branches)
-    * "release-latest" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros1.svg?branch=release-latest)](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros1/branches)
-* ROS build farm:
-    * ROS Kinetic @ u16.04 Xenial [![Build Status](http://build.ros.org/job/Kbin_uX64__cloudwatch_logger__ubuntu_xenial_amd64__binary/badge/icon)](http://build.ros.org/job/Kbin_uX64__cloudwatch_logger__ubuntu_xenial_amd64__binary)
-    * ROS Melodic @ u18.04 Bionic [![Build Status](http://build.ros.org/job/Mbin_uB64__cloudwatch_logger__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros.org/job/Mbin_uB64__cloudwatch_logger__ubuntu_bionic_amd64__binary)
-
 
 ## Installation
 
@@ -41,15 +29,10 @@ You will need to create an AWS Account and configure the credentials to be able 
 
 This node will require the following AWS account IAM role permissions:
 - `logs:PutLogEvents`
+- `logs:DescribeLogGroups`
 - `logs:DescribeLogStreams`
 - `logs:CreateLogStream`
 - `logs:CreateLogGroup`
-
-### Binaries
-On Ubuntu you can install the latest version of this package using the following command
-
-        sudo apt-get update
-        sudo apt-get install -y ros-$ROS_DISTRO-cloudwatch-logger
 
 ### Building from Source
 
@@ -74,16 +57,21 @@ _Note: If building the master branch instead of a release branch you may need to
 
 - Build the packages
 
-        cd ~/ros-workspace && colcon build
+```sh
+cd ~/ros-workspace && colcon build
+```
 
 - Configure ROS library Path
 
-        source ~/ros-workspace/install/setup.bash
+```sh
+source ~/ros-workspace/install/setup.bash
+```
 
 - Build and run the unit tests
 
-        colcon test --packages-select cloudwatch_logs_common && colcon test-result --all
-
+```sh
+colcon test --packages-select cloudwatch_logger && colcon test-result --all
+```
 
 ## Launch Files
 An example launch file called `sample_application.launch` is provided.
@@ -123,6 +111,7 @@ An example configuration file called `sample_configuration.yaml` is provided. Wh
 | publish_topic_names | Whether or not to include topic name information in the log messsages that are uploaded to AWS CloudWatch Logs | *bool* | true/false | true |
 | storage_directory | The location where all offline metrics will be stored | *string* | string | ~/.ros/cwlogs/ |
 | storage_limit | The maximum size of all offline storage files in KB. Once this limit is reached offline logs will start to be deleted oldest first. | *int* | number | 1048576 |
+| delete_stale_data | Whether or not to delete log batch data that are over 14 days old, which are rejected by [AWS PutLogEvents](https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html). | *bool* | true/false | false |
 | aws_client_configuration | AWS region configuration | *std::string* | *region*: "us-west-2"/"us-east-1"/"us-east-2"/etc. | region: us-west-2 |
 
 ### Advanced Configuration Parameters
@@ -158,13 +147,6 @@ None
 
 #### Services
 None
-
-
-## Bugs & Feature Requests
-Please contact the team directly if you would like to request a feature.
-
-Please report bugs in [Issue Tracker].
-
 
 [Amazon Web Services (AWS)]: https://aws.amazon.com/
 [Apache 2.0]: https://aws.amazon.com/apache-2-0/
