@@ -1,1 +1,1 @@
-{"trim": "", "base": "f733dbe", "trimbase": "", "parent": "debian/melodic/cloudwatch_logger", "previous": "ec49d8f"}
+{"base": "eb14e34", "parent": "debian/melodic/cloudwatch_logger", "previous": "4bb3cee", "trim": "", "trimbase": ""}
