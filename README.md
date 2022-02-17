@@ -1,20 +1,12 @@
 # cloudwatch_logger
 
+
 ## Overview
-The **`cloudwatch_logger`** node enables logs generated in a ROS system to get sent to AWS CloudWatch Logs.
-Out of the box, this node provides the ability to subscribe to the **`/rosout`**  topic, which all logs
-using the ROS logging framework will be published to by default, and sends logs to the AWS CloudWatch Logs service.
-Logs can be sent to AWS CloudWatch Logs selectively based on log severity. The **`cloudwatch_logger`** node
-can also subscribe to other topics if logs are not sent to **`/rosout`**, and it is able to unsubscribe from
-the **`/rosout`** topic if desired.
+The **`cloudwatch_logger`** node enables logs generated in a ROS system to get sent to AWS CloudWatch Logs. Out of the box, this node provides the ability to subscribe to the **`/rosout_agg`**  (rosout aggregated) topic, which all logs using the ROS logging framework will be published to, and sends logs to the AWS CloudWatch Logs service. Logs can be sent to AWS CloudWatch Logs selectively based on log severity. The **`cloudwatch_logger`** node can also subscribe to other topics if logs are not sent to **`/rosout_agg`**, and it is able to unsubscribe to the rosout_agg topic for getting logs.
 
 The **`cloudwatch_logger`** node wraps the [aws-sdk-c++] in a ROS service API.
 
-**Amazon CloudWatch Logs Summary**: AWS CloudWatch Logs can monitor applications and systems using log data.
-You can create alarms in CloudWatch and receive notifications of particular API activity as captured by CloudTrail
-and use the notification to perform troubleshooting. By default, logs are kept indefinitely and never expire.
-You can adjust the retention policy for each log group, keeping the indefinite retention, or choosing a
-retention period between 1 day to 10 years. AWS CloudWatch Logs stores your log data in highly durable storage.
+**Amazon CloudWatch Logs Summary**: AWS CloudWatch Logs can monitor applications and systems using log data. You can create alarms in CloudWatch and receive notifications of particular API activity as captured by CloudTrail and use the notification to perform troubleshooting. By default, logs are kept indefinitely and never expire. You can adjust the retention policy for each log group, keeping the indefinite retention, or choosing a retention periods between 10 years and one day. AWS CloudWatch Logs stores your log data in highly durable storage.
 
 **Keywords**: ROS Application logs, System logs, AWS CloudWatch Logs service
 
@@ -23,43 +15,28 @@ The source code is released under an [Apache 2.0].
 
 **Author**: AWS RoboMaker<br/>
 **Affiliation**: [Amazon Web Services (AWS)]<br/>
-**Maintainer**: AWS RoboMaker, ros-contributions@amazon.com
+
+RoboMaker cloud extensions rely on third-party software licensed under open-source licenses and are provided for demonstration purposes only. Incorporation or use of RoboMaker cloud extensions in connection with your production workloads or commercial product(s) or devices may affect your legal rights or obligations under the applicable open-source licenses. License information for this repository can be found [here](https://github.com/aws-robotics/cloudwatchlogs-ros1/blob/master/LICENSE). AWS does not provide support for this cloud extension. You are solely responsible for how you configure, deploy, and maintain this cloud extension in your workloads or commercial product(s) or devices.
 
 ### Supported ROS Distributions
-- Dashing
-
-### Build status
-* Travis CI:
-    * "master" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros2.svg?branch=master)](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros2/branches)
-    * "release-latest" branch [![Build Status](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros2.svg?branch=release-latest)](https://travis-ci.org/aws-robotics/cloudwatchlogs-ros2/branches)
-* ROS build farm:
-    * ROS2 Dashing @ u18.04 Bionic [![Build Status](http://build.ros2.org/job/Dbin_uB64__cloudwatch_logger__ubuntu_bionic_amd64__binary/badge/icon)](http://build.ros2.org/job/Dbin_uB64__cloudwatch_logger__ubuntu_bionic_amd64__binary)
-
+- Kinetic
+- Melodic
 
 ## Installation
 
 ### AWS Credentials
-You will need to create an AWS Account and configure the credentials to be able to communicate with AWS services.
-You may find [AWS Configuration and Credential Files] helpful.
+You will need to create an AWS Account and configure the credentials to be able to communicate with AWS services. You may find [AWS Configuration and Credential Files] helpful.
 
 This node will require the following AWS account IAM role permissions:
 - `logs:PutLogEvents`
+- `logs:DescribeLogGroups`
 - `logs:DescribeLogStreams`
 - `logs:CreateLogStream`
 - `logs:CreateLogGroup`
 
-### Binaries
-On Ubuntu you can install the latest version of this package using the following command
-
-        sudo apt-get update
-        sudo apt-get install -y ros-${ROS_DISTRO}-cloudwatch-logger
-
 ### Building from Source
 
-To build from source you'll need to create a new workspace, clone and checkout the latest release branch of
-this repository, install all the dependencies, and compile. If you need the latest development features
-you can clone from the `master` branch instead of the latest release branch. While we guarantee the release
-branches are stable, __the `master` should be considered to have an unstable build__ due to ongoing development. 
+To build from source you'll need to create a new workspace, clone and checkout the latest release branch of this repository, install all the dependencies, and compile. If you need the latest development features you can clone from the `master` branch instead of the latest release branch. While we guarantee the release branches are stable, __the `master` should be considered to have an unstable build__ due to ongoing development. 
 
 - Create a ROS workspace and a source directory
 
@@ -68,7 +45,7 @@ branches are stable, __the `master` should be considered to have an unstable bui
 - Clone the package into the source directory . 
 
         cd ~/ros-workspace/src
-        git clone https://github.com/aws-robotics/cloudwatchlogs-ros2.git -b release-latest
+        git clone https://github.com/aws-robotics/cloudwatchlogs-ros1.git -b release-latest
 
 - Install dependencies
 
@@ -80,37 +57,41 @@ _Note: If building the master branch instead of a release branch you may need to
 
 - Build the packages
 
-        cd ~/ros-workspace && colcon build
+```sh
+cd ~/ros-workspace && colcon build
+```
 
 - Configure ROS library Path
 
-        source ~/ros-workspace/install/local_setup.bash
+```sh
+source ~/ros-workspace/install/setup.bash
+```
 
-- Run the unit tests
+- Build and run the unit tests
 
-        colcon test && colcon test-result --all
-
+```sh
+colcon test --packages-select cloudwatch_logger && colcon test-result --all
+```
 
 ## Launch Files
-An example launch file called `cloudwatch_logger.launch.py` is provided.
+An example launch file called `sample_application.launch` is provided.
 
 ## Usage
 
 ### Run the node
 - **With** launch file using parameters in .yaml format (example provided)
-  - ROS: `ros2 launch cloudwatch_logger cloudwatch_logger.launch.py`
+  - ROS: `roslaunch cloudwatch_logger sample_application.launch`
 
 - **Without** launch file using default values
-  - ROS: `ros2 run cloudwatch_logger cloudwatch_logger __log_disable_rosout:=true`
+  - ROS: `rosrun cloudwatch_logger cloudwatch_logger`
 
 ### Send a test log message
-- `ros2 topic pub rosout rcl_interfaces/msg/Log '{level: 20, name: test_log, msg: test_cloudwatch_logger, function: test_logs, line: 1}'`
+- `rostopic pub -1 /rosout rosgraph_msgs/Log '{header: auto, level: 2, name: test_log, msg: test_cloudwatch_logger, function: test_logs, line: 1}'`
 
 ### Verify that the test log message was successfully sent to CloudWatch Logs
 - Go to your AWS account
 - Find CloudWatch and click into CloudWatch
-- On the upper right corner, change region to `Oregon` if you launched the node using the launch file,
-  or change to `N. Virginia` if you launched the node without using the launch file
+- On the upper right corner, change region to `Oregon` if you launched the node using the launch file, or change to `N. Virginia` if you launched the node without using the launch file
 - Select `Logs` from the left-hand side menu
 - **With** launch file: The name of the log group should be `robot_application_name` and the log stream should be `device name`
 - **Without** launch file: The name of the log group should be `ros_log_group` and the log stream should be `ros_log_stream`
@@ -121,14 +102,16 @@ An example configuration file called `sample_configuration.yaml` is provided. Wh
 
 | Parameter Name | Description | Type | Allowed Values | Default |
 | -------------- | ----------- | ---- | -------------- | ------------ |
-| sub_to_rosout  | Whether to subscribe to `rosout` topic | *bool* | true/false | true |
+| sub_to_rosout  | Whether to subscribe to *rosout_agg* topic | *bool* | true/false | true |
 | publish_frequency | Log publishing frequency in seconds | *double* | number | 5.0 |
 | log_group_name | AWS CloudWatch log group name | *std::string* | 'string'<br/>*note*: Log group names must be unique within a region foran AWS account | ros_log_group |
 | log_stream_name | AWS CloudWatch log stream name | *std::string* | 'string'<br/>*note*: The : (colon) and * (asterisk) characters are not allowed | ros_log_stream |
-| topics | A list of topics to get logs from (excluding `rosout`) | *std::vector<std::string>* | ['string', 'string', 'string'] | `[]` |
-| min_log_verbosity| The minimum log severity for sending logs selectively to AWS CloudWatch Logs, log messages with a severity lower than `min_log_verbosity` will be ignored | *std::string* | DEBUG/INFO/WARN/ERROR/FATAL | DEBUG |
+| topics | A list of topics to get logs from (excluding `rosout_agg`) | *std::vector<std::string>* | ['string', 'string', 'string'] | `[]` |
+| min_log_verbosity | The minimum log severity for sending logs selectively to AWS CloudWatch Logs, log messages with a severity lower than `min_log_verbosity` will be ignored | *std::string* | DEBUG/INFO/WARN/ERROR/FATAL | DEBUG |
+| publish_topic_names | Whether or not to include topic name information in the log messsages that are uploaded to AWS CloudWatch Logs | *bool* | true/false | true |
 | storage_directory | The location where all offline metrics will be stored | *string* | string | ~/.ros/cwlogs/ |
 | storage_limit | The maximum size of all offline storage files in KB. Once this limit is reached offline logs will start to be deleted oldest first. | *int* | number | 1048576 |
+| delete_stale_data | Whether or not to delete log batch data that are over 14 days old, which are rejected by [AWS PutLogEvents](https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html). | *bool* | true/false | false |
 | aws_client_configuration | AWS region configuration | *std::string* | *region*: "us-west-2"/"us-east-1"/"us-east-2"/etc. | region: us-west-2 |
 
 ### Advanced Configuration Parameters
@@ -151,10 +134,9 @@ Most users won't need to touch these parameters, they are useful if you want fin
 Send logs in a ROS system to AWS CloudWatch Logs service.
 
 #### Subscribed Topics
-- **`/rosout`**
+- **`/rosout_agg`**
 
-  By default in ROS, all logs from applications using ROS standard logging framework are sent to `rosout` topic.
-  The *cloudwatch_logger* subscribes to `rosout` by default.
+  By default in ROS, all logs from applications using ROS standard logging framework are sent to *rosout_agg* topic. The *cloudwatch_logger* subscribes to *rosout_agg* by default.
 
 - **`/other_topics`**
 
@@ -166,16 +148,9 @@ None
 #### Services
 None
 
-
-## Bugs & Feature Requests
-Please contact the team directly if you would like to request a feature.
-
-Please report bugs in [Issue Tracker].
-
-
 [Amazon Web Services (AWS)]: https://aws.amazon.com/
 [Apache 2.0]: https://aws.amazon.com/apache-2-0/
 [AWS Configuration and Credential Files]: https://docs.aws.amazon.com/cli/latest/userguide/cli-config-files.html
 [aws-sdk-c++]: https://github.com/aws/aws-sdk-cpp
-[Issue Tracker]: https://github.com/aws-robotics/cloudwatchlogs-ros2/issues
+[Issue Tracker]: https://github.com/aws-robotics/cloudwatchlogs-ros1/issues
 [ROS]: http://www.ros.org
